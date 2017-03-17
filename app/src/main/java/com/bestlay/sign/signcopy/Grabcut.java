@@ -17,10 +17,12 @@ import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.FileProvider;
 import android.util.FloatMath;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 
 import org.opencv.android.OpenCVLoader;
@@ -33,16 +35,21 @@ import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
-public class Grabcut extends Activity implements View.OnTouchListener {
+public class Grabcut extends Activity implements View.OnTouchListener,View.OnClickListener  {
     ImageView iv;
     Bitmap bitmap;
     Canvas canvas;
+    Button mCamera,mProcess;
 
-    Point tl, br;
+
+    private String mCurrentPhotoPath;    Point tl, br;
     int counter;
     Bitmap bitmapResult, bitmapBackground;
 
@@ -53,6 +60,8 @@ public class Grabcut extends Activity implements View.OnTouchListener {
 
     private static final int RESULT_LOAD_IMAGE = 100;
     private static final int FINE_MEDIA_ACCESS_PERMISSION_REQUEST = 123;
+    private static final int CAMERA_ACCESS_PERMISSION_REQUEST = 124;
+
     // These matrices will be used to scale points of the image
     Matrix matrix = new Matrix();
     Matrix savedMatrix = new Matrix();
@@ -81,13 +90,17 @@ public class Grabcut extends Activity implements View.OnTouchListener {
         setContentView(R.layout.grabcut_main);
         iv = (ImageView) this.findViewById(R.id.imageView);
 iv.setOnTouchListener(this);
+        mCamera=(Button) findViewById(R.id.camera);
 
-
+        mProcess=(Button) findViewById(R.id.process);
+        mProcess.setOnClickListener(this);
+        mCamera.setOnClickListener(this);
+        bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.indexa);
 
 
     }
-    public void open(View v){
-        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.indexa);
+    public void open(){
+
         //Bitmap b=makeBlackTransparent(bitmap);
         //iv.setImageBitmap(b);
       /* try {
@@ -449,14 +462,69 @@ iv.setOnTouchListener(this);
                     findPhoto();
                 }
             }
+            case CAMERA_ACCESS_PERMISSION_REQUEST: {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    takePhoto();
+                }
+            }
         }
     }
+
+    private void takePhoto() {
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.CAMERA},
+                    CAMERA_ACCESS_PERMISSION_REQUEST);
+        } else {
+            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            if (cameraIntent.resolveActivity(getPackageManager()) != null) {
+                // Create the File where the photo should go
+              //  File photoFile = null;
+                try {
+                  //  photoFile = createImageFile();
+                    Uri photoURI = FileProvider.getUriForFile(this, this.getApplicationContext().getPackageName() + ".provider", createImageFile());
+                    cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                    startActivityForResult(cameraIntent, CAMERA_ACCESS_PERMISSION_REQUEST);
+                } catch (IOException ex) {
+                    // Error occurred while creating the File
+                    Log.i(TAG, "IOException");
+                }
+                // Continue only if the File was successfully created
+              //  if (photoFile != null) {
+                   // cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, pho);
+                   // startActivityForResult(cameraIntent, CAMERA_ACCESS_PERMISSION_REQUEST);
+               // }
+            }
+        }
+    }
+   private File createImageFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                imageFileName,  // prefix
+                ".jpg",         // suffix
+                storageDir      // directory
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        mCurrentPhotoPath = "file:" + image.getAbsolutePath();
+        return image;
+    }
+
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == RESULT_LOAD_IMAGE && resultCode == RESULT_OK && null != data) {
             Bitmap photo = (Bitmap) data.getExtras().get("data");
             iv.setImageBitmap(photo);
+            bitmap=photo;
            /* Uri selectedImage = data.getData();
             String[] filePathColumn = {MediaStore.Images.Media.DATA};
             Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
@@ -467,5 +535,25 @@ iv.setOnTouchListener(this);
             cursor.close();*/
 
         }
+        if (requestCode == CAMERA_ACCESS_PERMISSION_REQUEST && resultCode == RESULT_OK) {
+            try {
+                bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), Uri.parse(mCurrentPhotoPath));
+                iv.setImageBitmap(bitmap);
+                // mImageView.setImageBitmap(mImageBitmap);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    public void onClick(View v) {
+        if(v.getId()==R.id.camera){
+           takePhoto();
+        }else if(v.getId()==R.id.process){
+            open();
+
+        }
+
     }
 }

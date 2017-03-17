@@ -4,20 +4,27 @@
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/black"
-    android:weightSum="1">
+>
 
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:srcCompat="@mipmap/ic_launcher"
         android:id="@+id/imageView"
-        android:background="@android:color/white"
+        android:background="@android:color/transparent"
         android:layout_weight="0.64" />
 
     <Button
-        android:text="Button"
+        android:text="process"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/button"
-        android:onClick="open"/>
+        android:id="@+id/process"
+        />
+
+    <Button
+        android:text="camera"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/camera"
+     />
 </LinearLayout>
